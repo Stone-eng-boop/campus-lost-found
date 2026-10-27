@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园寻物通 - AI赋能，让失物回家</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #0c1445 0%, #1a1a2e 20%, #16213e 50%, #0f3460 100%);
+      color: #e6f7ff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* 星空背景 */
+    .stars {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      background-color: #fff;
+      border-radius: 50%;
+      animation: twinkle var(--duration, 4s) infinite ease-in-out;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* 页面通用样式 */
+    .page {
+      display: none;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 首页样式 */
+    .header {
+      text-align: center;
+      padding: 40px 0;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #4facfe;
+      text-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+      margin-bottom: 10px;
+    }
+
+    .slogan {
+      font-size: 1.2rem;
+      color: #a7d0ff;
+      opacity: 0.9;
+    }
+
+    .main-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 50px;
+      flex-wrap: wrap;
+    }
+
+    .main-btn {
+      padding: 20px 40px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 200px;
+      box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+    }
+
+    .main-btn.search {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+
+    .main-btn.found {
+      background: linear-gradient(135deg, #00cdac 0%, #02aab0 100%);
+      color: white;
+    }
+
+    .main-btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 30px rgba(79, 172, 254, 0.5);
+    }
+
+    .list-section {
+      margin-top: 30px;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      color: #4facfe;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .item-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(79, 172, 254, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .item-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
+      border-color: rgba(79, 172, 254, 0.4);
+    }
+
+    .item-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #4facfe;
+      margin-bottom: 10px;
+    }
+
+    .item-desc {
+      color: #a7d0ff;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+
+    .contact-btn {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    /* 信息提交页样式 */
+    .form-container {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 600px;
+      margin: 0 auto;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(79, 172, 254, 0.2);
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #4facfe;
+      font-weight: 500;
+    }
+
+    .form-select, .form-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(79, 172, 254, 0.3);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #e6f7ff;
+      font-size: 1rem;
+    }
+
+    .form-textarea {
+      height: 120px;
+      resize: vertical;
+    }
+
+    .upload-area {
+      border: 2px dashed rgba(79, 172, 254, 0.5);
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .upload-area:hover {
+      border-color: #4facfe;
+      background: rgba(79, 172, 254, 0.1);
+    }
+
+    .upload-text {
+      color: #a7d0ff;
+      margin-bottom: 10px;
+    }
+
+    .match-btn {
+      width: 100%;
+      padding: 18px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+    }
+
+    .match-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+    }
+
+    /* 匹配结果页样式 */
+    .result-container {
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px;
+    }
+
+    .result-header {
+      font-size: 1.3rem;
+      color: #4facfe;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(79, 172, 254, 0.1);
+      border-radius: 10px;
+      border: 1px solid rgba(79, 172, 254, 0.2);
+    }
+
+    .comparison-section {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .comparison-card {
+      flex: 1;
+      min-width: 250px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 25px;
+      border: 1px solid rgba(79, 172, 254, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .comparison-title {
+      font-size: 1.2rem;
+      color: #4facfe;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    .comparison-content {
+      color: #a7d0ff;
+      line-height: 1.6;
+    }
+
+    .match-degree {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #00cdac;
+      margin: 30px 0;
+      text-shadow: 0 0 20px rgba(0, 205, 172, 0.5);
+    }
+
+    .contact-owner-btn {
+      padding: 15px 40px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #00cdac 0%, #02aab0 100%);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .contact-owner-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 205, 172, 0.4);
+    }
+
+    /* 导航按钮 */
+    .nav-btn {
+      padding: 10px 20px;
+      margin: 10px;
+      background: rgba(79, 172, 254, 0.2);
+      color: #4facfe;
+      border: 1px solid rgba(79, 172, 254, 0.3);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-btn:hover {
+      background: rgba(79, 172, 254, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <!-- 星空背景 -->
+  <div class="stars" id="stars"></div>
+
+  <div class="container">
+    <!-- 页面导航 -->
+    <div style="text-align: center; margin-bottom: 20px;">
+      <button class="nav-btn" onclick="showPage('home')">🏠 首页</button>
+      <button class="nav-btn" onclick="showPage('submit')">📝 提交</button>
+      <button class="nav-btn" onclick="showPage('result')">🔍 结果</button>
+    </div>
+
+    <!-- 首页（大厅） -->
+    <div id="home" class="page active">
+      <div class="header">
+        <div class="logo">校园寻物通</div>
+        <div class="slogan">AI赋能，让失物回家</div>
+      </div>
+
+      <div class="main-buttons">
+        <button class="main-btn search" onclick="showPage('submit')">我要寻物</button>
+        <button class="main-btn found" onclick="showPage('submit')">我要招领</button>
+      </div>
+
+      <div class="list-section">
+        <div class="section-title">最新失物招领</div>
+        <div class="card-grid">
+          <div class="item-card">
+            <div class="item-title">三教捡到黑伞</div>
+            <div class="item-desc">在三教一楼女厕所门口捡到一把黑色长柄伞，伞柄有白色胶带</div>
+            <button class="contact-btn">联系TA</button>
+          </div>
+          <div class="item-card">
+            <div class="item-title">二食堂校园卡</div>
+            <div class="item-desc">在二食堂二楼捡到一张校园卡，姓名张XX，学号2023XXXX</div>
+            <button class="contact-btn">联系TA</button>
+          </div>
+          <div class="item-card">
+            <div class="item-title">图书馆耳机</div>
+            <div class="item-desc">在图书馆六楼捡到一副白色AirPods耳机</div>
+            <button class="contact-btn">联系TA</button>
+          </div>
+          <div class="item-card">
+            <div class="item-title">精诚楼钥匙</div>
+            <div class="item-desc">在精诚楼201教室捡到一串钥匙，有宿舍钥匙和自行车钥匙</div>
+            <button class="contact-btn">联系TA</button>
+          </div>
+          <div class="item-card">
+            <div class="item-title">创智楼水杯</div>
+            <div class="item-desc">在创智楼一楼休息区捡到一个蓝色保温杯</div>
+            <button class="contact-btn">联系TA</button>
+          </div>
+          <div class="item-card">
+            <div class="item-title">驿站快递</div>
+            <div class="item-desc">在驿站门口捡到一个未取走的快递包裹</div>
+            <button class="contact-btn">联系TA</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 信息提交页 -->
+    <div id="submit" class="page">
+      <div class="header">
+        <div class="logo">信息提交</div>
+        <div class="slogan">请详细描述您的物品信息</div>
+      </div>
+
+      <div class="form-container">
+        <div class="form-group">
+          <label class="form-label">物品分类</label>
+          <select class="form-select">
+            <option value="">请选择物品分类</option>
+            <option value="证件">证件</option>
+            <option value="电子产品">电子产品</option>
+            <option value="生活用品">生活用品</option>
+            <option value="学习用品">学习用品</option>
+            <option value="服饰">服饰</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">丢失/拾取地点</label>
+          <select class="form-select">
+            <option value="">请选择地点</option>
+            <option value="正心楼">正心楼</option>
+            <option value="食堂">食堂</option>
+            <option value="精诚楼">精诚楼</option>
+            <option value="三号楼">三号楼</option>
+            <option value="四号楼">四号楼</option>
+            <option value="五号楼">五号楼</option>
+            <option value="驿站">驿站</option>
+            <option value="超市">超市</option>
+            <option value="洗衣店">洗衣店</option>
+            <option value="咖啡店">咖啡店</option>
+            <option value="创智楼">创智楼</option>
+            <option value="东门">东门</option>
+            <option value="北门">北门</option>
+            <option value="南门">南门</option>
+            <option value="西门">西门</option>
+            <option value="图书馆">图书馆</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">详细描述</label>
+          <textarea class="form-textarea" placeholder="请描述颜色、特征、丢失时间等，如：黑色长柄伞，伞柄有白色胶带"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">照片上传</label>
+          <div class="upload-area" onclick="alert('上传成功！')">
+            <div class="upload-text">点击上传物品照片</div>
+            <div style="font-size: 2rem;">📸</div>
+          </div>
+        </div>
+
+        <button class="match-btn" onclick="showPage('result')">开始智能匹配</button>
+      </div>
+    </div>
+
+    <!-- 智能匹配结果页 -->
+    <div id="result" class="page">
+      <div class="header">
+        <div class="logo">智能匹配结果</div>
+        <div class="slogan">AI已为您在全网比对，找到1条高度相似信息！</div>
+      </div>
+
+      <div class="result-container">
+        <div class="result-header">
+          AI已为您在全网比对，找到1条高度相似信息！
+        </div>
+
+        <div class="comparison-section">
+          <div class="comparison-card">
+            <div class="comparison-title">您的输入</div>
+            <div class="comparison-content">
+              黑色长柄伞<br>
+              三教
+            </div>
+          </div>
+
+          <div class="comparison-card">
+            <div class="comparison-title">数据库匹配</div>
+            <div class="comparison-content">
+              黑色雨伞，带有白色胶带<br>
+              三教
+            </div>
+          </div>
+        </div>
+
+        <div class="match-degree">
+          匹配度：92%
+        </div>
+
+        <button class="contact-owner-btn" onclick="alert('微信号：LostAndFound_Helper\n手机号：138-0000-1234')">
+          立即联系拾主
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 创建星空背景
+    function createStars() {
+      const starsContainer = document.getElementById('stars');
+      const starCount = 150;
+
+      for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        
+        // 随机位置
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
+        
+        // 随机大小
+        const size = Math.random() * 3;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        
+        // 随机动画延迟和持续时间
+        star.style.animationDelay = `${Math.random() * 5}s`;
+        star.style.setProperty('--duration', `${3 + Math.random() * 4}s`);
+        
+        starsContainer.appendChild(star);
+      }
+    }
+
+    // 显示指定页面
+    function showPage(pageId) {
+      // 隐藏所有页面
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+      });
+      
+      // 显示目标页面
+      document.getElementById(pageId).classList.add('active');
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      createStars();
+    });
+  </script>
+</body>
+</html>
